@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+    container_name: url-short-app
+    ports:
+      - "8081:8080"
+    environment:
+      - SERVER_PORT=${SERVER_PORT}
+      - BASE_URL=${BASE_URL:-http://localhost:8081}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+      - CODE_LENGTH=${CODE_LENGTH:-6}
+      - DATABASE_TYPE=${DATABASE_TYPE}
+      - PG_HOST=${PG_HOST}
+      - PG_PORT=${PG_PORT}
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_DBNAME=${PG_DBNAME}
+      - PG_SSLMODE=${PG_SSLMODE:-disable}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - url-short-network
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: url-short-db
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DBNAME}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DBNAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - url-short-network
+
+volumes:
+  postgres_data:
+
+networks:
+  url-short-network:
+    driver: bridge
